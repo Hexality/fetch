@@ -1,3 +1,4 @@
+#requires -version 7
 function fetch([switch]$v, [switch]$NoClear) {
   if ($IsWindows -or $IsLinux) {
     $global:cfg = @{
