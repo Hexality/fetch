@@ -168,7 +168,7 @@ function fetch([switch]$v, [switch]$NoClear) {
     }
     $Linehost = @(
       $PSStyle.Bold
-      '$PSStyle.Foreground.' + (($cfg.AccentColor) ?? ("FromConsoleColor('Green')")) | Invoke-Expression; ($cfg.CustomName) ?? ($cfg.UseHostname ? ([System.Net.Dns]::GetHostName()) : ($env:USER)); 
+      '$PSStyle.Foreground.' + (($cfg.AccentColor) ?? ("FromConsoleColor('Green')")) | Invoke-Expression; ($cfg.CustomName) ?? ($cfg.UseHostname ? ([System.Net.Dns]::GetHostName()) : ($IsLinux ? $env:USER : $env:USERNAME)); 
       $PSStyle.BoldOff
       '$PSStyle.Foreground.' + (($cfg.TextColor1) ?? ("FromConsoleColor('White')")) | Invoke-Expression; " at "; 
       $PSStyle.Bold
@@ -205,7 +205,7 @@ function fetch([switch]$v, [switch]$NoClear) {
         elseif ($IsWindows) {
         ((wmic os get Caption)[2]).Substring('10', '14')
         }
-        '$PSStyle.Foreground.' + (($cfg.TextColor2) ?? ("FromConsoleColor('DarkGray')")) | Invoke-Expression; " ($($isWindows ? ('') : ('Running on')) $KernelVersion)"
+        '$PSStyle.Foreground.' + (($cfg.TextColor2) ?? ("FromConsoleColor('DarkGray')")) | Invoke-Expression; " ($($isWindows ? ('') : ('Running on '))$KernelVersion)"
         $PSStyle.Reset
       ) -join ''
     )
