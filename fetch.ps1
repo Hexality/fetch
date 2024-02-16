@@ -248,7 +248,7 @@ function fetch([switch]$v, [switch]$NoClear) {
           Get-LinuxPackages 
         }
         elseif ($IsWindows) {
-        ((Get-InstalledSoftware -ErrorAction SilentlyContinue).Name).Count, "System$(if((Get-Command scoop -erroraction silentlycontinue).source ){" and Scoop"}))"
+        ((Get-InstalledSoftware -ErrorAction SilentlyContinue).Name).Count, "(System$(if((Get-Command scoop -erroraction silentlycontinue).source ){" and Scoop"}))"
         }
         '$PSStyle.Foreground.' + (($cfg.TextColor1) ?? ("FromConsoleColor('White')")) | Invoke-Expression; $pkg[0];
         " ";
@@ -270,7 +270,7 @@ function fetch([switch]$v, [switch]$NoClear) {
         $tmulti = ($cpuinf | Where-Object field -match "per core").data
       }
       $cpuname = if ($IsLinux) { ($cpuinf | Where-Object field -match "Model name").data } elseif ($IsWindows) { 
-        (powershell -c "Get-WmiObject -Class Win32_Processor -ComputerName.").Name 
+        powershell -c "(Get-WmiObject -Class Win32_Processor -ComputerName.).Name[1]"
       }
       @(
         $PSStyle.Bold
@@ -291,7 +291,7 @@ function fetch([switch]$v, [switch]$NoClear) {
       @(
         $PSStyle.Bold
         '$PSStyle.Foreground.' + (($cfg.AccentColor) ?? ("FromConsoleColor('Green')")) | Invoke-Expression; "GPU: "; $PSStyle.BoldOff
-        '$PSStyle.Foreground.' + (($cfg.TextColor1) ?? ("FromConsoleColor('White')")) | Invoke-Expression; if ($IsLinux) { (lspci | grep VGA | cut -d ":" -f3).Substring(1) } elseif ($isWindows) { (powershell -c "Get-WmiObject win32_VideoController").VideoProcessor } 
+        '$PSStyle.Foreground.' + (($cfg.TextColor1) ?? ("FromConsoleColor('White')")) | Invoke-Expression; if ($IsLinux) { (lspci | grep VGA | cut -d ":" -f3).Substring(1) } elseif ($isWindows) { powershell -c "(Get-WmiObject win32_VideoController).VideoProcessor" } 
         $PSStyle.Reset
       ) -join ''  
     )
