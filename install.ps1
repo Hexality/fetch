@@ -1,5 +1,8 @@
 #requires -version 7
 $POSHPA = Split-Path -Parent $PROFILE
+if(Test-Path $PROFILE){
+  Copy-Item $PROFILE "$($PROFILE).bkp"
+}
 if(!(Test-Path $POSHPA)){ 
   mkdir -p $POSHPA
 }
