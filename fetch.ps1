@@ -1,3 +1,4 @@
+#requires -version 7
 function fetch([switch]$v, [switch]$NoClear) {
   if ($IsWindows -or $IsLinux) {
     $global:cfg = @{
@@ -270,7 +271,7 @@ function fetch([switch]$v, [switch]$NoClear) {
         $tmulti = ($cpuinf | Where-Object field -match "per core").data
       }
       $cpuname = if ($IsLinux) { ($cpuinf | Where-Object field -match "Model name").data } elseif ($IsWindows) { 
-        powershell -c "(Get-WmiObject -Class Win32_Processor -ComputerName.).Name[1]"
+        powershell -c '$name = (Get-WmiObject -Class Win32_Processor -ComputerName.).Name; if($name.count -eq 1){ $name } else { $name[1] }'
       }
       @(
         $PSStyle.Bold
