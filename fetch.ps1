@@ -145,8 +145,10 @@ function fetch([switch]$v, [switch]$NoClear) {
       if (Get-Command flatpak -ErrorAction SilentlyContinue) {
         $flatpak = (flatpak list).count - 1 #idk if this will work well though
       }
-      if (Get-Command yum -ErrorAction SilentlyContinue) {
+      if ((Get-Command yum -ErrorAction SilentlyContinue) -and !(Get-Command "rpm-ostree" -ErrorAction SilentlyContinue)) {
         $yum = (yum list --installed).count - 1 #idk if this will work well though
+      } elseif (Get-Command rpm-ostree -ErrorAction SilentlyContinue) {
+        $ostree = (rpm -qa).Count
       }
       if (Get-Command zypper -ErrorAction SilentlyContinue) {
         $zyp = (zypper --no-refresh packages -i).count - 2 # this one is most definitely wrong in matter of numbers.
@@ -156,8 +158,8 @@ function fetch([switch]$v, [switch]$NoClear) {
       }
       $appimage = (ls -R $HOME | grep -G '.appimage$').count
 
-      $result = "$($flatpak + $yum + $zyp + $dpkg + $appimage)"
-      $info = "($(if($flatpak) { "flatpak: $flatpak,"}; if($yum) { "yum/dnf: $yum,"}; if($zyp) { "zypper: $zyp,"}; if($dpkg) { "dpkg: $dpkg,"}; if($appimage) { "appimage: $appimage"}))"
+      $result = "$($flatpak + ($ostree ?? $yum) + $zyp + $dpkg + $appimage)"
+      $info = "($(if($flatpak) { "flatpak: $flatpak,"}; if($yum) { "yum/dnf: $yum,"}; if($ostree) { "atomic: $ostree,"}; if($zyp) { "zypper: $zyp,"}; if($dpkg) { "dpkg: $dpkg,"}; if($appimage) { "appimage: $appimage"}))"
       return [array]($result, $info)
     }
   
@@ -173,7 +175,14 @@ function fetch([switch]$v, [switch]$NoClear) {
       $PSStyle.BoldOff
       '$PSStyle.Foreground.' + (($cfg.TextColor1) ?? ("FromConsoleColor('White')")) | Invoke-Expression; " at "; 
       $PSStyle.Bold
-      '$PSStyle.Foreground.' + (($cfg.FolderColor) ?? ("FromConsoleColor('Red')")) | Invoke-Expression; if ((Resolve-Path .) -match $env:HOME) { (Resolve-Path .).Path.Replace($HOME, "~") } else { (Resolve-Path .).Path }
+      '$PSStyle.Foreground.' + (($cfg.FolderColor) ?? ("FromConsoleColor('Red')")) | Invoke-Expression; if ((Resolve-Path .) -match $env:HOME) { 
+        $curPath = (Resolve-Path .).Path
+        if($curPath.StartsWith("/var/home/")) {
+          $curPath.Replace("/var$($env:HOME)", "~") 
+        } else {
+          $curPath.Replace($env:HOME, "~")
+        }
+      } else { (Resolve-Path .).Path }
       $PSStyle.BoldOff
       $PSStyle.Reset;
     ) -join ''
@@ -185,7 +194,7 @@ function fetch([switch]$v, [switch]$NoClear) {
       ) -join ''
     }
     $KernelVersion = if ($isWindows) {
- (Get-Item C:\Windows\System32\ntoskrnl.exe).VersionInfo.ProductVersionRaw 
+      (Get-Item C:\Windows\System32\ntoskrnl.exe).VersionInfo.ProductVersionRaw 
     }
     elseif ($isLinux) { uname -r }
 
@@ -409,28 +418,28 @@ function fetch([switch]$v, [switch]$NoClear) {
           })
       }
       elseif ($isLinux) {
-        if ((Get-Content /etc/os-release | ConvertFrom-StringData).Name.Trim('"') -match "Tumbleweed") {
+        if ((Get-Content /etc/os-release | ConvertFrom-StringData).Name.Trim('"') -match "Fedora") {
           [array]$SystemLogo += @(
-            "                              ",
-            "                              ",
-            "                              ",
-            "                              ",
-            "                              ",
-            "   ⠀⠀⡠⡐⠄⠆⢔⠠⡀⠀⠀⠀⠀⠀⡀⠔⠐⠈⠂⠃⠢⢂⢀⠀   ",
-            "   ⠀⠎⠀⠀⠀⠀⠀⠈⠌⠪⡀⠀⡐⠌⠀⠀⠀⠀⠀⠀⠀⠀⠑⠄   ",
-            "   ⠪⠀⠀⠀⠀⠀⠀⠀⠀⠀⡠⠑⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢕   ",
-            "   ⠈⡢⠀⠀⠀⠀⠀⢀⠰⡨⠂⠀⢐⠔⠔⠀⠀⠀⠀⠀⠀⢀⢔⠁   ",
-            "   ⠀⠈⠘⠰⠐⠔⠌⠊⠈⠀⠀⠀⠀⠁⠁⠃⠆⢄⢄⢄⠆⠒⠀⠀   ",
-            "                              ",
-            "                              ",
-            "                              ",
-            "                              ",
-            "                              "
+            "⠀⠀⠀⢀⢠⢐⢔⠰⡐⢔⢔⠰⡐⡔⢔⠰⡐⡔⢔⠰⡐⡔⢔⠰⡐⡔⢔⠰⡰⡰",
+            "⠀⠠⡘⡌⡢⡱⡐⠕⡅⡣⡂⢇⠕⡌⢆⢣⠱⡨⠢⡣⡑⡌⢆⢣⠱⡨⡢⡳⡹⡪",
+            "⠠⢣⢑⢌⢆⠊⠈⠈⠢⢪⠨⡢⡃⠎⠈⠐⠑⠜⡌⢆⢪⠨⠊⠀⠑⣜⢎⢗⢝⢮",
+            "⢘⢔⠱⡐⡅⠀⠨⠂⠀⢕⠱⡐⢕⠀⠈⠂⠀⢕⢘⠌⡆⠂⠀⠎⠀⡜⡵⡹⣕⡳",
+            "⢑⢔⢑⢕⠸⡐⡀⠀⡎⢜⢌⠪⢢⢑⠄⠀⡪⡘⢔⠑⠈⣀⢆⢦⡪⡺⣪⢣⢧⢳",
+            "⢢⢑⠅⡆⡣⡑⡀⠠⠣⡑⢔⠱⡑⡌⡂⠀⡪⠘⠀⡠⣪⡪⡳⣕⢝⢮⡪⡳⡕⡧",
+            "⢌⢆⠣⡊⡢⣑⠀⠠⢣⢑⢅⢣⢑⢌⠂⠀⠈⣀⢮⢺⡸⡪⠃⠃⠫⡪⣎⢗⢝⣎",
+            "⡂⢎⠜⢌⢢⢒⠀⢈⠆⡕⢌⠆⡕⠌⠂⣀⣀⣀⣀⣀⣀⡀⠀⠇⠀⡸⡪⡳⣕⢕",
+            "⡘⢔⢑⢅⠕⡌⠄⢀⠣⡊⢆⠃⠂⡠⡲⣱⢪⡲⣕⢵⡱⡕⡦⢤⢲⡹⡪⣇⢗⡕",
+            "⢘⢌⢊⢢⠱⡨⠀⢀⠇⠕⠁⣀⢮⡪⡳⡕⡧⡳⣕⠵⣕⢝⡎⣗⢵⡹⡪⣎⢧⡫",
+            "⢑⢌⠪⡂⡣⠪⠀⠀⠁⡠⡲⡱⣕⢝⢎⢗⢝⢮⡪⣫⡪⡣⠋⠊⠪⡎⣗⠵⣕⡳",
+            "⠌⢆⢣⠱⡨⡑⡁⡀⡀⡁⡁⡁⡈⡈⡈⡈⡈⡀⡈⡀⡈⡀⠐⠖⠀⡸⣪⢫⢎⢮",
+            "⠜⢌⢢⠱⡨⣎⢗⢝⢎⢗⢵⡹⣪⢺⢜⢮⢺⢜⢵⡹⡪⣎⢆⢤⢔⡝⣜⢵⡹⡂",
+            "⡘⡌⡆⡯⡺⡸⣕⢝⣕⢝⢮⢺⡸⣕⡳⣕⡳⡹⡜⣎⢗⣕⢝⢎⢧⡫⢮⡪⠊⠀",
+            "⠰⡪⠺⡪⠳⡹⠜⡕⠮⠳⠕⠧⠳⢕⠵⠱⠝⢎⠗⡕⠧⠳⠭⠳⠕⠝⠁⠀⠀⠀"
           ).ForEach({
               @(
                 " " * (($cfg.FrontSpacing) ?? 4); 
                 $cfg.UseBoldLogo ? ($PSStyle.Bold) : $null
-                '$PSStyle.Background.' + (($cfg.SystemLogoBg) ?? ("FromConsoleColor('Green')")) | Invoke-Expression; '$PSStyle.Foreground.' + (($cfg.SystemLogoFg) ?? ("FromConsoleColor('Black')")) | Invoke-Expression; $_; 
+                Invoke-Expression -ErrorAction SilentlyContinue ('$PSStyle.Background.' + (($cfg.SystemLogoBg) ?? ("None"))); Invoke-Expression -ErrorAction SilentlyContinue ('$PSStyle.Foreground.' + (($cfg.SystemLogoFg) ?? ("FromConsoleColor('Blue')"))); $_; 
                 $cfg.UseBoldLogo ? ($PSStyle.BoldOff) : $null
                 $PSStyle.Reset
               ) -join '';
@@ -472,3 +481,4 @@ function fetch([switch]$v, [switch]$NoClear) {
     Write-Error "Your operating system isn't supported by this script."
   }
 }
+
